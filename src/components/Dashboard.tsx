@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, LogOut, Calendar, Eye } from 'lucide-react';
-import { logout } from '../firebase/auth';
+import { Plus, Calendar as CalendarIcon, Eye } from 'lucide-react';
 import { getUserEntries, Entry } from '../firebase/firestore';
 import { useAuth } from '../hooks/useAuth';
 import { EntryModal } from './EntryModal';
 import { AddEditEntryModal } from './AddEditEntryModal';
 import { format } from 'date-fns';
+import Header from './Header';
 
 export const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
+  const [editingEntry, setEditingEntry] = useState<Entry | undefined>(undefined);
 
   const loadEntries = async () => {
     if (!user) return;
@@ -36,17 +36,9 @@ export const Dashboard: React.FC = () => {
     loadEntries();
   }, [user]);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  };
-
   const handleEntryUpdated = () => {
     loadEntries();
-    setEditingEntry(null);
+    setEditingEntry(undefined);
     setShowAddModal(false);
   };
 
@@ -69,108 +61,74 @@ export const Dashboard: React.FC = () => {
   }
 
   const sortedEntries = [...entries].sort((a, b) => {
-    const dateA = a.date || new Date(0); // Fallback to epoch start if no date
+    const dateA = a.date || new Date(0);
     const dateB = b.date || new Date(0);
     return dateB.getTime() - dateA.getTime();
   });
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Debug info - can be removed later */}
-      <div className="fixed bottom-0 right-0 bg-black bg-opacity-75 text-white p-2 text-xs z-50">
-        <div>Entries count: {entries.length}</div>
-        {entries.length > 0 && entries[0]?.date && (
-          <div>First entry date: {new Date(entries[0].date).toString()}</div>
-        )}
-      </div>
+      <Header 
+        onAddClick={() => setShowAddModal(true)}
+        addButtonText="New Entry"
+      />
 
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">Pin Potha</h1>
-              <span className="text-sm text-gray-500">
-                Welcome, {user?.displayName}
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Entry
-              </button>
-              <button
-                onClick={handleLogout}
-                className="text-gray-600 hover:text-gray-900 p-2 rounded-lg transition-colors duration-200"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {entries.length === 0 ? (
+        {sortedEntries.length === 0 ? (
           <div className="text-center py-12">
-            <Calendar className="h-24 w-24 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-medium text-gray-900 mb-2">No entries yet</h3>
-            <p className="text-gray-500 mb-6">Start by creating your first memory entry</p>
+            <h2 className="text-2xl font-semibold text-gray-700 mb-4">No entries yet</h2>
+            <p className="text-gray-500 mb-6">Start by creating your first journal entry.</p>
             <button
               onClick={() => setShowAddModal(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors duration-200 flex items-center gap-2 mx-auto"
             >
-              <Plus className="h-5 w-5" />
+              <Plus size={18} />
               Create First Entry
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {sortedEntries.map((entry) => (
-              <div
-                key={entry.id}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer group"
-                onClick={() => setSelectedEntry(entry)}
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-semibold text-gray-900 truncate flex-1">
-                      {entry.name}
-                    </h3>
-                    <Eye className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ml-2 flex-shrink-0" />
-                  </div>
-                  
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                    {entry.description}
-                  </p>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {entry.date ? format(new Date(entry.date), 'MMM d, yyyy') : 'No date'}
-                    </span>
-                    
-                    {entry.mediaUrls.length > 0 && (
-                      <div className="flex items-center gap-1">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span className="text-xs text-gray-500">
-                          {entry.mediaUrls.length} file{entry.mediaUrls.length > 1 ? 's' : ''}
-                        </span>
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-gray-800">Your Journal Entries</h2>
+            <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+              <ul className="divide-y divide-gray-200">
+                {sortedEntries.map((entry) => (
+                  <li key={entry.id}>
+                    <div 
+                      className="px-4 py-4 sm:px-6 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setSelectedEntry(entry)}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="text-lg font-semibold text-gray-900 truncate flex-1">
+                          {entry.title || entry.name || 'Untitled'}
+                        </h3>
+                        <Eye className="h-4 w-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ml-2 flex-shrink-0" />
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                      <p className="text-base text-gray-600 mb-4 line-clamp-2">
+                        {entry.content || entry.description || ''}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <CalendarIcon className="h-3 w-3" />
+                          {entry.date ? format(new Date(entry.date), 'MMM d, yyyy') : 'No date'}
+                        </span>
+                        {entry.mediaUrls?.length > 0 && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-xs text-gray-500">
+                              {entry.mediaUrls.length} file{entry.mediaUrls.length > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
       </main>
 
-      {/* Modals */}
       {selectedEntry && (
         <EntryModal
           entry={selectedEntry}
@@ -182,15 +140,11 @@ export const Dashboard: React.FC = () => {
 
       {showAddModal && (
         <AddEditEntryModal
-          onClose={() => setShowAddModal(false)}
-          onSuccess={handleEntryUpdated}
-        />
-      )}
-
-      {editingEntry && (
-        <AddEditEntryModal
           entry={editingEntry}
-          onClose={() => setEditingEntry(null)}
+          onClose={() => {
+            setShowAddModal(false);
+            setEditingEntry(undefined);
+          }}
           onSuccess={handleEntryUpdated}
         />
       )}

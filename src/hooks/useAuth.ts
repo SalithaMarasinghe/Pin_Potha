@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
+import { User, onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
 
 export const useAuth = () => {
@@ -15,5 +15,16 @@ export const useAuth = () => {
     return unsubscribe;
   }, []);
 
-  return { user, loading };
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      // Clear any local storage or state if needed
+      localStorage.removeItem('user');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
+  };
+
+  return { user, loading, logout };
 };

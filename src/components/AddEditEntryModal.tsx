@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Calendar, Upload, Image, Video, Volume2 } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import { addEntry, updateEntry, Entry } from '../firebase/firestore';
@@ -20,7 +20,7 @@ export const AddEditEntryModal: React.FC<AddEditEntryModalProps> = ({
   const { user } = useAuth();
   const [name, setName] = useState(entry?.name || '');
   const [description, setDescription] = useState(entry?.description || '');
-  const [date, setDate] = useState<Date | null>(entry?.date || null);
+  const [date, setDate] = useState(entry?.date ? new Date(entry.date) : null);
   const [files, setFiles] = useState<File[]>([]);
   const [existingMediaUrls, setExistingMediaUrls] = useState(entry?.mediaUrls || []);
   const [loading, setLoading] = useState(false);
@@ -28,6 +28,15 @@ export const AddEditEntryModal: React.FC<AddEditEntryModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!entry;
+
+  useEffect(() => {
+    if (entry) {
+      setName(entry.name || '');
+      setDescription(entry.description || '');
+      setDate(entry.date ? new Date(entry.date) : null);
+      setExistingMediaUrls(entry.mediaUrls || []);
+    }
+  }, [entry]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -167,7 +176,7 @@ export const AddEditEntryModal: React.FC<AddEditEntryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
