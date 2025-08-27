@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "pin-potha-web",
+    "firebase init": "pinpotha-lite"
+  },
+  "targets": {},
+  "etags": {}
+}
