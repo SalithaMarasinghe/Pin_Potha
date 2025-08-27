@@ -24,22 +24,21 @@ export interface Entry {
   date?: Date | null;   // Entry date
   createdAt: Date;      // When the entry was created
   updatedAt?: Date;     // When the entry was last updated
-  mediaUrls?: string[]; // Array of media URLs
+  mediaUrls?: string[]; // Array of media file URLs
 }
 
 const ENTRIES_COLLECTION = 'entries';
 
 export const addEntry = async (entry: Omit<Entry, 'id' | 'createdAt'>): Promise<Entry> => {
   try {
-    // Create a clean entry object with only defined values and proper defaults
+    // Create a clean entry object with only defined values
     const cleanEntry: Record<string, any> = {
-      title: entry.title || entry.name || 'Untitled',
-      name: entry.name || entry.title || 'Untitled',
-      description: entry.description || '',
-      content: entry.content || entry.description || '',
       userId: entry.userId,
-      mediaUrls: entry.mediaUrls || [],
-      createdAt: Timestamp.now()
+      title: entry.title || entry.name || '',
+      content: entry.content || entry.description || '',
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+      mediaUrls: entry.mediaUrls || []
     };
 
     // Only add date if it exists
@@ -54,18 +53,17 @@ export const addEntry = async (entry: Omit<Entry, 'id' | 'createdAt'>): Promise<
       }
       return acc;
     }, {} as Record<string, any>);
-    
+
     const docRef = await addDoc(collection(db, ENTRIES_COLLECTION), finalEntry);
     
-    // Return the complete entry with ID and proper date handling
     return {
+      ...entry,
       id: docRef.id,
-      ...finalEntry,
-      createdAt: finalEntry.createdAt.toDate(),
-      ...(finalEntry.date && { date: finalEntry.date.toDate() })
-    } as Entry;
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
   } catch (error) {
-    console.error('Error adding entry:', error);
+    console.error('Error adding entry: ', error);
     throw error;
   }
 };
@@ -77,29 +75,27 @@ export const getUserEntries = async (userId: string): Promise<Entry[]> => {
       where('userId', '==', userId),
       orderBy('createdAt', 'desc')
     );
-    
+
     const querySnapshot = await getDocs(q);
     const entries: Entry[] = [];
-    
+
     querySnapshot.forEach((doc) => {
-      const data = doc.data() as DocumentData;
+      const data = doc.data();
       entries.push({
         id: doc.id,
-        title: data.title || data.name, // Use title if exists, otherwise fall back to name
-        name: data.name,
-        description: data.description,
-        content: data.content || data.description || '', // Use content if exists, otherwise fall back to description
+        userId: data.userId,
+        title: data.title || data.name || '',
+        content: data.content || data.description || '',
         date: data.date?.toDate(),
         createdAt: data.createdAt.toDate(),
-        userId: data.userId,
-        mediaUrls: data.mediaUrls || [],
-        updatedAt: data.updatedAt?.toDate()
+        updatedAt: data.updatedAt?.toDate(),
+        mediaUrls: data.mediaUrls || []
       });
     });
-    
+
     return entries;
   } catch (error) {
-    console.error('Error getting entries:', error);
+    console.error('Error getting entries: ', error);
     throw error;
   }
 };
@@ -109,62 +105,51 @@ export const updateEntry = async (entryId: string, updates: Partial<Entry>): Pro
     const entryRef = doc(db, ENTRIES_COLLECTION, entryId);
     
     // Create a clean updates object with only defined values
-    const cleanUpdates: Record<string, any> = {};
-    
+    const cleanUpdates: Record<string, any> = {
+      updatedAt: Timestamp.now()
+    };
+
     // Only include fields that are defined in the updates
     if (updates.title !== undefined) cleanUpdates.title = updates.title;
-    if (updates.name !== undefined) cleanUpdates.name = updates.name;
-    if (updates.description !== undefined) cleanUpdates.description = updates.description;
     if (updates.content !== undefined) cleanUpdates.content = updates.content;
-    if (updates.mediaUrls !== undefined) cleanUpdates.mediaUrls = updates.mediaUrls || [];
-    
-    // Handle date separately to ensure proper conversion
+    if (updates.description !== undefined) cleanUpdates.description = updates.description;
+    if (updates.name !== undefined) cleanUpdates.name = updates.name;
     if (updates.date !== undefined) {
       cleanUpdates.date = updates.date ? Timestamp.fromDate(updates.date) : null;
     }
-    
-    // Always update the updatedAt timestamp
-    cleanUpdates.updatedAt = Timestamp.now();
-    
-    // Only proceed if we have valid updates
-    if (Object.keys(cleanUpdates).length === 0) {
-      throw new Error('No valid fields to update');
-    }
-    
-    // Perform the update
+    if (updates.mediaUrls !== undefined) cleanUpdates.mediaUrls = updates.mediaUrls;
+
     await updateDoc(entryRef, cleanUpdates);
-    
+
     // Get the updated document
     const updatedDoc = await getDoc(entryRef);
-    if (!updatedDoc.exists()) {
-      throw new Error('Entry not found after update');
-    }
-    
-    // Convert Firestore data to Entry type
     const data = updatedDoc.data();
+    
+    if (!data) {
+      throw new Error('Failed to fetch updated entry');
+    }
+
     return {
       id: updatedDoc.id,
-      title: data.title || data.name || 'Untitled',
-      name: data.name || data.title || 'Untitled',
-      description: data.description || '',
-      content: data.content || data.description || '',
       userId: data.userId,
-      mediaUrls: data.mediaUrls || [],
-      createdAt: data.createdAt?.toDate(),
+      title: data.title || data.name || '',
+      content: data.content || data.description || '',
+      date: data.date?.toDate(),
+      createdAt: data.createdAt.toDate(),
       updatedAt: data.updatedAt?.toDate(),
-      ...(data.date && { date: data.date.toDate() })
-    } as Entry;
+      mediaUrls: data.mediaUrls || []
+    };
   } catch (error) {
-    console.error('Error updating entry:', error);
+    console.error('Error updating entry: ', error);
     throw error;
   }
 };
 
-export const deleteEntry = async (entryId: string) => {
+export const deleteEntry = async (entryId: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, ENTRIES_COLLECTION, entryId));
   } catch (error) {
-    console.error('Error deleting entry:', error);
+    console.error('Error deleting entry: ', error);
     throw error;
   }
 };

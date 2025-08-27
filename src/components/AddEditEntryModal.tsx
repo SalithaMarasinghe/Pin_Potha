@@ -52,8 +52,7 @@ export const AddEditEntryModal: React.FC<AddEditEntryModalProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
-    if (e.dataTransfer.files) {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       handleFiles(Array.from(e.dataTransfer.files));
     }
   };
@@ -99,36 +98,30 @@ export const AddEditEntryModal: React.FC<AddEditEntryModalProps> = ({
   };
 
   const removeExistingMedia = (url: string) => {
-    setExistingMediaUrls(prev => prev.filter(u => u !== url));
+    setExistingMediaUrls(prev => prev.filter(item => item !== url));
   };
 
   const getFilePreview = (file: File) => {
-    const url = URL.createObjectURL(file);
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
-    
-    if (isImage) {
-      return <img src={url} alt={file.name} className="w-full h-20 object-cover rounded" />;
-    } else if (isVideo) {
-      return <video src={url} className="w-full h-20 object-cover rounded" />;
-    } else {
-      return (
-        <div className="w-full h-20 bg-gray-100 rounded flex items-center justify-center">
-          <Volume2 className="h-6 w-6 text-gray-500" />
-        </div>
-      );
+    if (file.type.startsWith('image/')) {
+      return <Image className="h-5 w-5 text-blue-500" />;
+    } else if (file.type.startsWith('video/')) {
+      return <Video className="h-5 w-5 text-purple-500" />;
+    } else if (file.type.startsWith('audio/')) {
+      return <Volume2 className="h-5 w-5 text-green-500" />;
     }
+    return <File className="h-5 w-5 text-gray-500" />;
   };
 
   const getFileTypeIcon = (url: string) => {
     const extension = url.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
-      return <Image className="h-4 w-4" />;
-    } else if (['mp4', 'webm', 'ogg'].includes(extension || '')) {
-      return <Video className="h-4 w-4" />;
-    } else {
-      return <Volume2 className="h-4 w-4" />;
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(extension || '')) {
+      return <Image className="h-4 w-4 text-blue-500" />;
+    } else if (['mp4', 'webm', 'ogg', 'mov'].includes(extension || '')) {
+      return <Video className="h-4 w-4 text-purple-500" />;
+    } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(extension || '')) {
+      return <Volume2 className="h-4 w-4 text-green-500" />;
     }
+    return <File className="h-4 w-4 text-gray-500" />;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

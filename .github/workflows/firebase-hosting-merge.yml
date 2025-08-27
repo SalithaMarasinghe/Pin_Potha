@@ -5,12 +5,17 @@ name: Deploy to Firebase Hosting on merge
 on:
   push:
     branches:
+<<<<<<< HEAD
       - master
+=======
+      - main
+>>>>>>> ae5e5ba58b2c7adb05003408524c0181dfb4ab14
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+<<<<<<< HEAD
       - run: npm ci & npm run build
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -18,3 +23,12 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PIN_POTHA_WEB }}
           channelId: live
           projectId: pin-potha-web
+=======
+      - run: (npm ci && npm run build)
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PINPOTHA_LITE }}
+          channelId: live
+          projectId: pinpotha-lite
+>>>>>>> ae5e5ba58b2c7adb05003408524c0181dfb4ab14
